@@ -13,7 +13,8 @@
    ],
    "dependencies": {
       "requirejs": "jrburke/requirejs#2.1.x",
-      "requirejs-plugins": "millermedeiros/requirejs-plugins#1.0.x"
+      "requirejs-plugins": "millermedeiros/requirejs-plugins#1.0.x",
+      "fast-json-patch": "Starcounter-Jack/JSON-Patch#~0.5.2"
    },
    "devDependencies": {
       "laxar-patterns": "LaxarJS/laxar-patterns#^1.0.0-alpha.2",
