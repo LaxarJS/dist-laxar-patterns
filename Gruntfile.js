@@ -42,11 +42,6 @@ module.exports = function (grunt) {
       generateSourceMaps: false
    };
 
-   // internal dependencies:
-   var fullPaths = options( {
-      'json-patch': 'fast-json-patch/src/json-patch-duplex'
-   }, base.paths );
-
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    grunt.initConfig( {
@@ -58,19 +53,6 @@ module.exports = function (grunt) {
          'default': {
             options: {
                out: base.out + '.js'
-            }
-         },
-
-         // LaxarJS Patterns, with internal dependencies
-         'with-deps': {
-            options: {
-               paths: fullPaths,
-               shim: {
-                  'json-patch': {
-                     exports: 'jsonpatch'
-                  }
-               },
-               out: base.out + '.with-deps.js'
             }
          }
       },
@@ -86,12 +68,6 @@ module.exports = function (grunt) {
             files: {
                'dist/laxar-patterns.min.js': [ 'dist/laxar-patterns.js' ]
             }
-         },
-
-         'with-deps': {
-            files: {
-               'dist/laxar-patterns.with-deps.min.js': [ 'dist/laxar-patterns.with-deps.js' ]
-            }
          }
       }
    } );
@@ -103,17 +79,4 @@ module.exports = function (grunt) {
 
    grunt.registerTask( 'dist', [ 'requirejs', 'uglify' ] );
 
-   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-   function options( source, defaults ) {
-      var target = {};
-      [ defaults, source ].forEach( function( src ) {
-         for( var key in src ) {
-            if( src.hasOwnProperty( key ) ) {
-               target[ key ] = src[ key ];
-            }
-         }
-      } );
-      return target;
-   }
 };

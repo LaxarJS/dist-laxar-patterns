@@ -17,7 +17,6 @@
    },
    "devDependencies": {
       "laxar-patterns": "LaxarJS/laxar-patterns#^1.0.0-alpha.2",
-      "laxar": "LaxarJS/laxar#^1.0.0-alpha.10",
-      "fast-json-patch": "Starcounter-Jack/JSON-Patch#~0.5.2"
+      "laxar": "LaxarJS/laxar#^1.0.0-alpha.10"
    }
 }
