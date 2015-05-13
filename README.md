@@ -7,5 +7,6 @@ This is the bower package for [LaxarJS Patterns](https://github.com/LaxarJS/laxa
 To rebuild the dist package, run:
 
 ```sh
+npm install
 grunt dist
 ```
