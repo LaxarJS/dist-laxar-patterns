@@ -3,12 +3,12 @@
    "version": "1.0.0-alpha.3",
    "description": "Building large applications is hard, so don't do that!",
    "homepage": "http://laxarjs.org",
-   "main": "dist/laxar.js",
+   "main": "dist/laxar-patterns.js",
    "author": "LaxarJS Team <info@laxarjs.org>",
    "license": "MIT",
    "repository": {
       "type": "git",
-      "url": "https://github.com/LaxarJS/dist-laxar.git"
+      "url": "https://github.com/LaxarJS/dist-laxar-patterns.git"
    },
    "scripts": {
       "prepublish": "bower install"
@@ -19,7 +19,7 @@
       "grunt-cli": "~0.1.13",
       "grunt-contrib-requirejs": "~0.4.4",
       "grunt-contrib-uglify": "~0.9.1",
-      "grunt-laxar": "1.0.0-alpha.8"
+      "grunt-laxar": "1.0.0-alpha.10"
    },
    "bugs": {
       "url": "https://github.com/LaxarJS/laxar-patterns/issues",
