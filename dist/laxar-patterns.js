@@ -3,6 +3,12 @@
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
+/**
+ * This module provides helpers for patterns regarding *takeActionRequest*, *willTakeAction* and
+ * *didTakeAction* events.
+ *
+ * @module actions
+ */
 define( 'laxar-patterns/lib/actions',[
    'angular',
    'laxar'
@@ -17,27 +23,16 @@ define( 'laxar-patterns/lib/actions',[
    var NOOP = function() {};
    var DELIVER_TO_SENDER = { deliverToSender: false };
 
-   /**
-    * The outcome for a successfully executed action.
-    *
-    * @type {String}
-    */
    var OUTCOME_SUCCESS = 'SUCCESS';
-
-   /**
-    * The outcome for the failed execution of an action.
-    *
-    * @type {String}
-    */
    var OUTCOME_ERROR = 'ERROR';
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    /**
     * Creates and returns a function to publish `takeActionRequest` events for a given action feature. The
-    * action to publish is expected to at the key `action` under the given feature path.
+    * action to publish is expected to be at the key `action` under the given feature path.
     *
-    * Apart from that this function works just like `publisher()`.
+    * Apart from that this function works just like {@link publisher}.
     *
     * @param {Object} scope
     *    the scope the publisher works on. Needs at least an EventBus instance as `eventBus` property
@@ -71,13 +66,13 @@ define( 'laxar-patterns/lib/actions',[
     * are called. Interpretation is simple: If at least one `didTakeAction` event yields the outcome "ERROR",
     * the overall outcome is also erroneous. In any other case the overall outcome will be successful.
     *
-    * The promise returned by the publisher is resolved if the overall outcome is successful and rejected if
+    * The promise returned by the publisher is resolved, if the overall outcome is successful and rejected if
     * the outcome is erroneous. All callbacks, be it the `on*` handlers or the then handlers of the promise,
     * will receive the list of events and meta information of all `didTakeAction` events
     * (see `EventBus#publishAndGatherReplies()` for details).
     *
     * Example:
-    * ```
+    * ```js
     * publisher = actions.publisher( scope, 'save', {
     *    onSuccess: function() { closeApplication(); },
     *    onError: function() { displayError(); }
@@ -155,15 +150,15 @@ define( 'laxar-patterns/lib/actions',[
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    /**
-    * Creates a new handler instance for `takeActionRequest` events. It handles sending of an optional
+    * Creates a new action handler instance for `takeActionRequest` events. It handles sending of an optional
     * `willTakeAction` event and the final, possibly later asynchronously following `didTakeAction` event.
     *
     * @param {Object} scope
-    *    the scope the handler should work with. It is expected to find an `eventBus`
-    *    property there with which it can do the event handling
+    *    the scope the handler should work with. It is expected to find an `eventBus` property there with
+    *    which it can do the event handling
     *
     * @return {ActionHandler}
-    *    not `null`
+    *    an action handler instance
     */
    function handlerFor( scope ) {
       ax.assert( scope ).hasType( Object ).hasProperty( 'eventBus' );
@@ -173,6 +168,13 @@ define( 'laxar-patterns/lib/actions',[
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+   /**
+    *
+    * @param scope
+    *
+    * @constructor
+    * @private
+    */
    function ActionHandler( scope ) {
       this.scope_ = scope;
    }
@@ -180,65 +182,55 @@ define( 'laxar-patterns/lib/actions',[
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    /**
-    * Registers a handler for `takeActionRequest` event with actions from a feature. It is assumed that the
-    * given feature has a `onActions` property which is a set of actions to listen to. The set may be empty,
-    * `null` or `undefined` in which case the handler simply won't be attached to any event.
+    * Registers a handler for `takeActionRequest` events with actions from a feature. It is assumed that the
+    * given feature has an `onActions` property, which is a set of actions to listen to. The set may be empty,
+    * `null` or `undefined`, in which case the handler simply won't be attached to any event.
     *
-    * Apart from that this function works just like `ActionHandler#registerActions()`.
+    * Apart from that this function works just like {@link ActionHandler#registerActions}.
     *
     * Example:
-    * Consider the following configuration:
-    * ```
-    *     features: {
-    *        open: {
-    *           onActions: [ 'openAction1', 'openAction2' ]
-    *        },
-    *        save: {
-    *           onActions: [ 'save' ]
-    *        }
-    *     }
+    * Consider the following configuration for a widget:
+    * ```json
+    * {
+    *    "features": {
+    *       "open": {
+    *          "onActions": [ "openAction1", "openAction2" ]
+    *       },
+    *       "save": {
+    *          "onActions": [ "save" ]
+    *       }
+    *    }
+    * }
     * ```
     * An example using that would be:
-    * ```
+    * ```js
     * actions.handlerFor( scope )
     *    .registerActionsFromFeature( 'open', function( event, meta ) {
     *       somethingSynchronous();
     *       return actions.OUTCOME_SUCCESS;
     *    } )
-    *    .registerActionsFromFeature( 'save', function( event, meta, done ) {
-    *       somethingAsynchronous()
-    *          .then( function() {
-    *             done( actions.OUTCOME_SUCCESS );
-    *          }, function() {
-    *             done( actions.OUTCOME_ERROR );
-    *          } );
-    *    }, {
-     *      async: true
-     *   } );
+    *    .registerActionsFromFeature( 'save', function( event, meta ) {
+    *       return $q.when( somethingAsynchronous() );
+    *    } );
     * ```
     *
     * @param {String} feature
     *    the feature to read the actions to watch from
     * @param {Function} handler
     *    the handler to call whenever a `takeActionRequest` event with matching action is received
-    * @param {Object} [optionalOptions]
-    *    options
-    * @param {Boolean} optionalOptions.async
-    *    if `true` the handler is assumed to be asynchronous and is treated as explained in the method comment.
-    *    Default is `false`
     *
     * @return {ActionHandler}
     *    this instance for chaining
     */
-   ActionHandler.prototype.registerActionsFromFeature = function( feature, handler, optionalOptions ) {
+   ActionHandler.prototype.registerActionsFromFeature = function( feature, handler ) {
       var actions = ax.object.path( this.scope_.features, feature + '.onActions' ) || [];
-      return this.registerActions( actions, handler, optionalOptions );
+      return this.registerActions( actions, handler );
    };
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    /**
-    * Registers a handler for `takeActionRequest` event for a set of actions. The set may be empty, in
+    * Registers a handler for `takeActionRequest` events for a set of actions. The set may be empty, in
     * which case the handler simply won't be attached to any event.
     *
     * The handler is assumed to be a function that receives the event and meta object of the underlying
@@ -250,21 +242,21 @@ define( 'laxar-patterns/lib/actions',[
     *   - the error is re-thrown
     * - the handler returns a simple value or a promise, that is later resolved with a value
     *   - if the value is a plain object, it is used as basis for the event object and
-    *   - if the object has a property `outcome` with value `ERROR`, the `didTakeAction` event is sent with
-    *     outcome `ERROR`
+    *     - if the object has a property `outcome` with value `ERROR`, the `didTakeAction` event is sent with
+    *       outcome `ERROR`
     *   - otherwise, or if the value is no plain object, the `didTakeAction` event is sent with outcome
     *     `SUCCESS`
     * - the handler returns a promise, that is later rejected with a value
     *   - if the value is a plain object, it is used as basis for the event object and
-    *   - if the object has a property `outcome` with value `SUCCESS`, the `didTakeAction` event is sent with
+    *     - if the object has a property `outcome` with value `SUCCESS`, the `didTakeAction` event is sent with
     *     outcome `SUCCESS`
     *   - otherwise, or if the value is no plain object, the `didTakeAction` event is sent with outcome `ERROR`
     *
     * So basically simple return values or resolved promises are assumed to be successful if they don't state
-    * otherwise, while rejected promises are assumed to be erroneous, if the don't state otherwise.
+    * otherwise, while rejected promises are assumed to be erroneous, if they don't state otherwise.
     *
     * Example:
-    * ```
+    * ```js
     * actions.handlerFor( scope )
     *    .registerActions( [ 'open' ], function( event, meta ) {
     *       return 42
@@ -360,6 +352,11 @@ define( 'laxar-patterns/lib/actions',[
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
+/**
+ * This module provides helpers for patterns regarding *didEncounterError* events.
+ *
+ * @module errors
+ */
 define( 'laxar-patterns/lib/errors',[ 'laxar' ], function( ax ) {
    'use strict';
 
@@ -369,31 +366,40 @@ define( 'laxar-patterns/lib/errors',[ 'laxar' ], function( ax ) {
     * Creates and returns a function to publish didEncounterError events related to a specific feature.
     * Generated events will not be delivered to the sender.
     *
-    * @param {Object} scope the scope the publisher works on
-    * @param {String=} featurePath The configuration path for (i18n) error-messages to publish.
-    * @param {Object=} options An optional object with additional configuration:
-    * @param {Function=} options.localizer A function such as `i18nHandler.localize` to prepare messages
+    * The returned publisher function takes these arguments:
+    * - `code`: a generic code that identifies the failing operation (such as 'HTTP_PUT', 'HTTP_GET')
+    * - `messagePath`: to lookup a human-readable message under this publisher's feature configuration
+    * - `data`: additional information to be used for substituting in the message, It should contain the
+    *   fields `resource` and `location` if applicable.
+    * - `cause`: more diagnostic information on the error's cause, such as the underlying HTTP status code
     *
-    * @returns {Function<[String, String, Object, cause]>}
-    *    a publisher function with four arguments:
-    *    - `code`: a generic code that identifies the failing operation (such as 'HTTP_PUT', 'HTTP_GET')
-    *    - `messagePath`: to lookup a human-readable message under this publisher's feature configuration
-    *    - `data`: additional information to be used for substituting in the message,
-    *              should contain the fields `resource` and `location` if applicable.
-    *    - `cause`: more diagnostic information on the error's cause, such as the underlying HTTP status code
+    * @param {Object} scope
+    *    the scope the publisher works on
+    * @param {String} featurePath
+    *    the configuration path for (i18n) error-messages to publish
+    * @param {Object} [options]
+    *    an optional object with additional configuration
+    * @param {Function} options.localizer
+    *    a function such as `i18nHandler.localize` to prepare messages
+    *
+    * @return {Function}
+    *    a publisher function with four arguments as described above
     */
    function errorPublisherForFeature( scope, featurePath, options ) {
       assert( scope ).hasType( Object ).isNotNull();
       assert( scope.eventBus ).hasType( Object ).isNotNull();
       assert( options ).hasType( Object );
+
       var localizer = options && options.localizer;
       assert( localizer ).hasType( Function );
 
       var featureConfiguration = ax.object.path( scope.features, featurePath );
       assert( featureConfiguration ).hasType( Object ).isNotNull();
+
       return function( code, messagePath, data, cause ) {
          var rawMessage = ax.object.path( featureConfiguration, messagePath );
          assert( rawMessage ).isNotNull();
+
          data = data || {};
          scope.eventBus.publish( 'didEncounterError.' + code, {
             code: code,
@@ -417,6 +423,11 @@ define( 'laxar-patterns/lib/errors',[ 'laxar' ], function( ax ) {
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
+/**
+ * This module provides helpers for patterns regarding *didChangeFlag* events.
+ *
+ * @module flags
+ */
 define( 'laxar-patterns/lib/flags',[
    'laxar'
 ], function( ax ) {
@@ -432,9 +443,12 @@ define( 'laxar-patterns/lib/flags',[
     * Additionally it is possible to let the handler set the current state of the accumulated flag on a given
     * scope property.
     *
-    * @param {Object} scope the scope the handler should work with. It is expected to find an `eventBus`
-    *    property there with which it can do the event handling
-    * @returns {FlagHandler} not `null`
+    * @param {Object} scope
+    *    the scope the handler should work with. It is expected to find an `eventBus` property there with
+    *    which it can do the event handling
+    *
+    * @returns {FlagHandler}
+    *    a flag handler instance
     */
    function handlerFor( scope ) {
       return new FlagHandler( scope );
@@ -442,173 +456,173 @@ define( 'laxar-patterns/lib/flags',[
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+   /**
+    *
+    * @param scope
+    *
+    * @constructor
+    * @private
+    */
    function FlagHandler( scope ) {
       this.scope_ = scope;
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-   FlagHandler.prototype = {
+   /**
+    * Registers a flag or a set of flags from the given feature. In contrast to the `ResourceHandler` here
+    * the complete attribute path to the flag(s) must be provided. This is due to the fact that there is no
+    * convention on names for flags on a feature, as there can coexist multiple flags for one feature, each
+    * influencing a different aspect of this feature.
+    *
+    * @param {String} featurePath
+    *    the attribute path to the configured flag(s) within the feature map
+    * @param {Object} [optionalOptions]
+    *    options and callbacks to use
+    * @param {Boolean} optionalOptions.initialState
+    *    the optional initial state of the accumulated state. If not given each non-inverted flag is initially
+    *    assumed to be `false` and `true`, if it is inverted
+    * @param {Function|Function[]} optionalOptions.onChange
+    *    a function or a list of functions to call whenever the accumulated state of the flags changes. It
+    *    receives the new state as first argument and its previous state as second argument
+    * @param {String} optionalOptions.scopeKey
+    *    the key to set the current accumulated state on in the scope. If not given, nothing happens. For
+    *    example `flags.myFlag` would set `scope.flags.myFlag` to the currently valid accumulated state
+    * @param {String} optionalOptions.predicate
+    *    one of these:
+    *    - `any`: if any of the flag's states is `true`, the accumulated state is `true. This is the default
+    *    - `all`: if all of the flag's states are `true`, the accumulated state is `true`
+    *
+    * @return {FlagHandler}
+    *    this instance for chaining
+    */
+   FlagHandler.prototype.registerFlagFromFeature = function( featurePath, optionalOptions ) {
+      return this.registerFlag( ax.object.path( this.scope_.features, featurePath, [] ), optionalOptions );
+   };
 
-      /**
-       * Registers a flag or a set of flags from the given feature. In contrast to the `ResourceHandler` here
-       * the complete attribute path to the flag(s) must be provided. This is due to the fact that there is no
-       * convention on names for flags on a feature, as there can coexist multiple flags for one feature, each
-       * influencing a different aspect of this feature.
-       *
-       * @param {String} featurePath the attribute path to the configured flag(s) within the feature map
-       * @param {Object=} options options and callbacks to use
-       * @param {Boolean} options.initialState the optional initial state of the accumulated state. If not
-       *    given each non-inverted flag is initially assumed to be `false` and `true`, if it is inverted.
-       * @param {Function|Function[]} options.onChange
-       *    a function or a list of functions to call whenever the accumulated state of the flags changes. It
-       *    receives the new state as first argument and its previous state as second argument
-       * @param {String} options.scopeKey the key to set the current accumulated state on in the scope. If not
-       *    given, nothing happens. For example `flags.myFlag` would set `scope.flags.myFlag` to the currently
-       *    valid accumulated state.
-       * @param {String} options.predicate on of these:
-       *    * `any`: if any of the flag's sates is `true`, the accumulated state is `true. This is the default
-       *    * `all`: if all of the flag's states are `true`, the accumulated state is `true`
-       * @returns {FlagHandler} this instance
-       */
-      registerFlagFromFeature: function( featurePath, options ) {
-         return this.registerFlag( ax.object.path( this.scope_.features, featurePath, [] ), options );
-      },
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-      ////////////////////////////////////////////////////////////////////////////////////////////////////////
+   /**
+    * Registers a flag or a set of flags given as argument. Even `undefined`, `null` or an empty array
+    * are handled gracefully and treated as an empty set of flags, thus never changing their states.
+    *
+    * The new accumulated state is set on `scope.flags` if that is defined. Otherwise it is set on
+    * `scope.model`.
+    *
+    * @param {String|String[]} possibleFlags
+    *    one or a list of flags to watch
+    * @param {Object} [optionalOptions]
+    *    options and callbacks to use
+    * @param {Boolean} optionalOptions.initialState
+    *    the optional initial state of the accumulated state. If not given each non-inverted flag is initially
+    *    assumed to be `false` and `true`, if it is inverted
+    * @param {Function|Function[]} optionalOptions.onChange
+    *    a function or a list of functions to call whenever the accumuated state of the flags changes. It
+    *    receives the new state as first argument and its previous state as second argument
+    * @param {String} optionalOptions.scopeKey
+    *    the key to set the current accumulated state on in the scope. If not given, nothing happens. For
+    *    example `flags.myFlag` would set `scope.flags.myFlag` to the currently valid accumulated state
+    * @param {String} optionalOptions.predicate
+    *    one of these:
+    *    - `any`: if any of the flag's sates is `true`, the accumulated state is `true. This is the default
+    *    - `all`: if all of the flag's states are `true`, the accumulated state is `true`
+    *
+    * @return {FlagHandler}
+    *    this instance for chaining
+    */
+   FlagHandler.prototype.registerFlag = function( possibleFlags, optionalOptions ) {
 
-      /**
-       * Registers a flag or a set of flags given as argument. Even `undefined`, `null` or an empty array
-       * are handled gracefully and treated as an empty set of flags, thus never changing their states.
-       *
-       * The new accumulated state is set on `scope.flags` if that is defined. Otherwise it is set on
-       * `scope.model`.
-       *
-       * @param {String|String[]} possibleFlags one or more flags to watch
-       * @param {Object=} options options and callbacks to use
-       * @param {Boolean} options.initialState the optional initial state of the accumulated state. If not
-       *    given each non-inverted flag is initially assumed to be `false` and `true`, if it is inverted.
-       * @param {Function|Function[]} options.onChange
-       *    a function or a list of functions to call whenever the accumuated state of the flags changes. It
-       *    receives the new state as first argument and its previous state as second argument
-       * @param {String} options.scopeKey the key to set the current accumulated state on in the scope. If not
-       *    given, nothing happens. For example `flags.myFlag` would set `scope.flags.myFlag` to the currently
-       *    valid accumulated state.
-       * @param {String} options.predicate on of these:
-       *    * `any`: if any of the flag's sates is `true`, the accumulated state is `true. This is the default
-       *    * `all`: if all of the flag's states are `true`, the accumulated state is `true`
-       * @returns {FlagHandler} this instance
-       */
-      registerFlag: function( possibleFlags, options ) {
+      optionalOptions = ax.object.options( optionalOptions, {
+         predicate: 'any'
+      } );
 
-         options = ax.object.options( options, {
-            predicate: 'any'
-         } );
+      var applyToScope = function(){};
+      if( 'scopeKey' in optionalOptions ) {
+         applyToScope = function( state ) {
+            ax.object.setPath( this.scope_, optionalOptions.scopeKey, state );
+         }.bind( this );
+      }
 
-         var applyToScope = function(){};
-         if( 'scopeKey' in options ) {
-            applyToScope = function( state ) {
-               ax.object.setPath( this.scope_, options.scopeKey, state );
-            }.bind( this );
-         }
+      var flags = processFlags( possibleFlags );
+      var changeHandler = processChangeHandlers( optionalOptions.onChange );
+      var oldState = ( typeof optionalOptions.initialState === 'boolean' ) ?
+         optionalOptions.initialState : evaluateState( flags, optionalOptions.predicate );
 
-         var flags = this.processFlags_( possibleFlags );
-         var changeHandler = this.processChangeHandlers_( options.onChange );
-         var oldState = ( typeof options.initialState === 'boolean' ) ?
-            options.initialState : this.evaluateState_( flags, options.predicate );
+      applyToScope( oldState );
 
-         applyToScope( oldState );
+      flags.forEach( function( flag ) {
+         this.scope_.eventBus.subscribe( 'didChangeFlag.' + flag.name, function( event ) {
+            flag.state = flag.negated ? !event.state : event.state;
 
-         flags.forEach( function( flag ) {
-            this.scope_.eventBus.subscribe( 'didChangeFlag.' + flag.name, function( event ) {
-               flag.state = flag.negated ? !event.state : event.state;
-
-               var newState = this.evaluateState_( flags, options.predicate );
-               if( newState !== oldState ) {
-                  applyToScope( newState );
-                  changeHandler( newState, oldState );
-                  oldState = newState;
-               }
-            }.bind( this ) );
+            var newState = evaluateState( flags, optionalOptions.predicate );
+            if( newState !== oldState ) {
+               applyToScope( newState );
+               changeHandler( newState, oldState );
+               oldState = newState;
+            }
          }.bind( this ) );
+      }.bind( this ) );
 
-         return this;
-      },
+      return this;
+   };
 
-      ////////////////////////////////////////////////////////////////////////////////////////////////////////
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-      /**
-       * @param {String[]} flags
-       * @returns {Object[]} processed flags
-       * @private
-       */
-      processFlags_: function( flags ) {
-         if( !flags ) {
-            return [];
-         }
+   function processFlags( flags ) {
+      if( !flags ) {
+         return [];
+      }
 
-         var flagArr = Array.isArray( flags ) ? flags : [ flags ];
-         return flagArr.map( function( flagExpression ) {
-            var negated = flagExpression.indexOf( '!' ) === 0;
-            return {
-               name: negated ? flagExpression.substr( 1 ) : flagExpression,
-               negated: negated,
-               state: negated // always the state after applying a possible negation
-            };
-         } );
-      },
-
-      ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-      /**
-       *
-       * @param handlers
-       * @returns {Function}
-       * @private
-       */
-      processChangeHandlers_: function( handlers ) {
-         if( !handlers ) {
-            return function() {};
-         }
-
-         var handlerArr = Array.isArray( handlers ) ? handlers : [ handlers ];
-         return function( newValue, oldValue ) {
-            handlerArr.forEach( function( handler ) {
-               handler( newValue, oldValue );
-            } );
+      var flagArr = Array.isArray( flags ) ? flags : [ flags ];
+      return flagArr.map( function( flagExpression ) {
+         var negated = flagExpression.indexOf( '!' ) === 0;
+         return {
+            name: negated ? flagExpression.substr( 1 ) : flagExpression,
+            negated: negated,
+            state: negated // always the state after applying a possible negation
          };
+      } );
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   function processChangeHandlers( handlers ) {
+      if( !handlers ) {
+         return function() {};
+      }
+
+      var handlerArr = Array.isArray( handlers ) ? handlers : [ handlers ];
+      return function( newValue, oldValue ) {
+         handlerArr.forEach( function( handler ) {
+            handler( newValue, oldValue );
+         } );
+      };
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   function evaluateState( flags, predicate ) {
+      var state = flags.reduce( evaluators[ predicate ], null );
+      return state === null ? false : state;
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   var evaluators = {
+
+      any: function( previousValue, flag ) {
+         return previousValue === null ? flag.state : flag.state || previousValue;
       },
 
       ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-      /**
-       * @param {Object[]} flags
-       * @param {String} predicate one of {"any", "all"}
-       * @returns {boolean}
-       * @private
-       */
-      evaluateState_: function( flags, predicate ) {
-         var state = flags.reduce( this.evaluators_[ predicate ], null );
-         return state === null ? false : state;
-      },
-
-      ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-      evaluators_: {
-
-         any: function( previousValue, flag ) {
-            return previousValue === null ? flag.state : flag.state || previousValue;
-         },
-
-         /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-         all: function( previousValue, flag ) {
-            return previousValue === null ? flag.state : flag.state && previousValue;
-         }
-
+      all: function( previousValue, flag ) {
+         return previousValue === null ? flag.state : flag.state && previousValue;
       }
 
    };
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    return {
       handlerFor: handlerFor
@@ -621,24 +635,30 @@ define( 'laxar-patterns/lib/flags',[
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
+/**
+ * This module provides helpers for patterns regarding *didChangeLocale* events.
+ *
+ * @module i18n
+ */
 define( 'laxar-patterns/lib/i18n',[
    'laxar'
 ], function( ax ) {
    'use strict';
 
-   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
    /**
     * Obtain a handler which applies didChangeLocale-events to the given scope.
     *
-    * @param {Object} scope  The model instance for which i18n-state should be managed.
-    * @param {String} i18nPath  An optional path within the scope (default: i18n) where to store i18n-state.
+    * @param {Object} scope
+    *    the scope instance for which i18n-state should be managed
+    * @param {String} [optionalI18nPath]
+    *    an optional path within the scope (default: `'i18n'`) where to store i18n-state
     *
-    * @return {Object}  A handler which manages the i18n-object on the scope, and which allows to register for
-    *                   locale changes, by topic or by feature.
+    * @return {I18nHandler}
+    *    a handler which manages the i18n-object on the scope, and which allows to register for locale
+    *    changes, by topic or by feature
     */
-   function handlerFor( scope, i18nPath ) {
-      i18nPath = i18nPath || 'i18n';
+   function handlerFor( scope, optionalI18nPath ) {
+      var i18nPath = optionalI18nPath || 'i18n';
       prepareScopeI18n();
 
       var callbacksByLocale = {};
@@ -657,6 +677,12 @@ define( 'laxar-patterns/lib/i18n',[
 
       ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+      /**
+       *
+       * @name I18nHandler
+       * @constructor
+       * @private
+       */
       var handler = {
 
          /**
@@ -664,16 +690,19 @@ define( 'laxar-patterns/lib/i18n',[
           *
           * @param {String|String[]} possibleLocales
           *    zero, one or more locale topics to manage
-          * @param {Object=} options
+          * @param {Object} [optionalOptions]
           *    an optional configuration object
-          * @param {Function|Function[]} options.onChange
+          * @param {Function|Function[]} optionalOptions.onChange
           *    a function or a list of functions to call whenever one of the locales changes
           *    It receives the event which triggered the change as the first argument, and the previous
-          *    language-tag as the second argument.
+          *    language-tag as the second argument
           *
-          * @return {Object}  This I18nHandler.
+          * @return {Object}
+          *    this instance for chaining
+          *
+          * @memberOf I18nHandler
           */
-         registerLocale: function( possibleLocales, options ) {
+         registerLocale: function( possibleLocales, optionalOptions ) {
             var locales = possibleLocales;
             if( !Array.isArray( possibleLocales ) ) {
                locales = possibleLocales ? [ possibleLocales ] : [];
@@ -683,7 +712,7 @@ define( 'laxar-patterns/lib/i18n',[
                   callbacksByLocale[ locale ] = [];
                   scope.eventBus.subscribe( 'didChangeLocale.' + locale, handleLocaleChangeEvent );
                }
-               var onChange = options.onChange;
+               var onChange = ( optionalOptions || {} ).onChange;
                if( onChange ) {
                   callbacksByLocale[ locale ] = callbacksByLocale[ locale ].concat(
                      Array.isArray( onChange ) ? onChange : [ onChange ]
@@ -702,13 +731,16 @@ define( 'laxar-patterns/lib/i18n',[
           * Otherwise, the entire configuration path has to be specified.
           *
           * @param {String} featurePath  A feature path for the current scope.
-          * @param {Object=} options  An optional configuration object.
+          * @param {Object} [optionalOptions]  An optional configuration object.
           *
-          * @return {Object}  This I18nHandler.
+          * @return {Object}
+          *    this instance for chaining
+          *
+          * @memberOf I18nHandler
           */
-         registerLocaleFromFeature: function( featurePath, options ) {
+         registerLocaleFromFeature: function( featurePath, optionalOptions ) {
             var entry = ax.object.path( scope.features, featurePath );
-            return handler.registerLocale( entry.locale || entry, options || {} );
+            return handler.registerLocale( entry.locale || entry, optionalOptions || {} );
          },
 
          /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -728,7 +760,7 @@ define( 'laxar-patterns/lib/i18n',[
                var tag = model.tags[ model.locale ];
                return tag ? ax.i18n.localizer( tag, fallback )( i18nValue ) : fallback;
             }
-            partial.format = function( i18nValue /*, substitution1, substitution2, ... */ ) {
+            partial.format = function( i18nValue, substitutions ) {
                var i18nLocalizer = ax.i18n.localizer( model.tags[ model.locale ] );
                return i18nLocalizer.format.apply( i18nLocalizer, arguments );
             };
@@ -768,6 +800,12 @@ define( 'laxar-patterns/lib/i18n',[
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
+/**
+ * This module provides helpers for dealing with patches for JSON structures, specifically regarding
+ * [RFC 6901](https://tools.ietf.org/html/rfc6901) and [RFC 6902](https://tools.ietf.org/html/rfc6902).
+ *
+ * @module json
+ */
 define( 'laxar-patterns/lib/json',[
    'laxar',
    'json-patch'
@@ -777,7 +815,7 @@ define( 'laxar-patterns/lib/json',[
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    /**
-    * Lookup a nested object using an rfc-6901 json pointer.
+    * Lookup a nested object using an rfc-6901 JSON pointer.
     *
     * @param {Object|Array=} object
     *    the object in which to lookup an entry
@@ -817,12 +855,11 @@ define( 'laxar-patterns/lib/json',[
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    /**
-    * Set a nested item within a structure using an rfc-6901 json pointer.
-    * Missing containers along the path will be created (using ax.object.path).
-    * The object is modified in-place.
+    * Set a nested item within a structure using an rfc-6901 JSON pointer. Missing containers along the path
+    * will be created (using ax.object.path). The object is modified in-place.
     *
-    * JSON pointer segments of the type '/-' (for appending to an array) are not supported.
-    * You can use a single JSON patch 'add' operation to achieve the desired effect.
+    * JSON pointer segments of the type '/-' (for appending to an array) are not supported. You can use a
+    * single JSON patch 'add' operation to achieve the desired effect.
     *
     * @param {Object|Array} object
     *    the object in which to lookup an entry
@@ -889,17 +926,33 @@ define( 'laxar-patterns/lib/json',[
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    /**
-    * Calls fast-json-patch to apply the given rfc-6902 JSON patch sequence in-place.
-    * If the patch sequence fails to apply, the behavior is undefined.
+    * Calls fast-json-patch to apply the given rfc-6902 JSON patch sequence in-place. If the patch sequence
+    * fails to apply, the behavior is undefined.
     *
     * @param {Object|Array} object
     *    the object to patch (in-place)
-    *
     * @param {Array} patches
     *    a sequence of patches as defined by rfc-6902
     */
    function applyPatch( object, patches ) {
       jsonPatch.apply( object, patches );
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   /**
+    * Calls fast-json-patch to create a rfc-6902 conform JSON patch sequence.
+    *
+    * @param {Object|Array} objectA
+    *    the first item for comparison
+    * @param {Object|Array} objectB
+    *    the second item for comparison
+    *
+    * @return {Array}
+    *    a sequence of patches as defined by rfc-6902
+    */
+   function createPatch( objectA, objectB ) {
+      return jsonPatch.compare( objectA, objectB );
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -912,7 +965,7 @@ define( 'laxar-patterns/lib/json',[
       pathToPointer: pathToPointer,
       // rfc-6902 helpers
       applyPatch: applyPatch,
-      createPatch: jsonPatch.compare
+      createPatch: createPatch
    };
 
 } );
@@ -921,6 +974,11 @@ define( 'laxar-patterns/lib/json',[
  * Copyright 2014 aixigo AG
  * Released under the MIT license.
  * http://laxarjs.org/license
+ */
+/**
+ * Module for old-style LaxarJS patches used with the didUpdate event.
+ *
+ * @module patches
  */
 define( 'laxar-patterns/lib/patches',[
    'laxar'
@@ -936,8 +994,10 @@ define( 'laxar-patterns/lib/patches',[
     * it is automatically inserted, using an array if the next key would be an integer. If a value is
     * appended to an array all values in between are set to `null`.
     *
-    * @param {Object} obj the object to apply the patches on
-    * @param {Object} patchMap the mapping of paths to new values
+    * @param {Object} obj
+    *    the object to apply the patches on
+    * @param {Object} patchMap
+    *    the mapping of paths to new values
     */
    function apply( obj, patchMap ) {
       if( Array.isArray( patchMap ) ) {
@@ -968,10 +1028,13 @@ define( 'laxar-patterns/lib/patches',[
     * Properties that start with '$$' are ignored when creating patches, so that for example the $$hashCode
     * added by AngularJS ngRepeat is ignored.
     *
-    * @param {Object} result the resulting object the patch map should establish
-    * @param {Object} base the object used to base the patches upon
+    * @param {Object} result
+    *    the resulting object the patch map should establish
+    * @param {Object} base
+    *    the object used to base the patches upon
     *
-    * @return {Object} the mapping of path to patch-value
+    * @return {Object}
+    *    the mapping of path to patch-value
     */
    function create( result, base ) {
       var targetType = type( result );
@@ -1021,37 +1084,16 @@ define( 'laxar-patterns/lib/patches',[
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    /**
-    * Clean AngularJS hidden properties (starting with $$) from an object, in place.
-    *
-    * @param {Object} object The object to clean.
-    * @return {Object} The same object, cleaned.
-    */
-   function clean( object ) {
-      if( object === null ) {
-         return object;
-      }
-      for( var key in object ) {
-         if( object.hasOwnProperty( key ) ) {
-            if( key.charAt( 0 ) === '$' && key.charAt( 1 ) === '$' ) {
-               delete object[ key ];
-            }
-            else if( typeof object[ key ] === 'object' ) {
-               clean( object[ key ] );
-            }
-         }
-      }
-      return object;
-   }
-
-   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-   /**
-    * Merges two patch maps and returns the result. When properties exist in both patch maps, prorperties
+    * Merges two patch maps and returns the result. When properties exist in both patch maps, properties
     * within the second map overwrite those found within the first one.
     *
-    * @param {Object} first first map to merge
-    * @param {Object} second second map to merge
-    * @return {Object} the result of the merging
+    * @param {Object} first
+    *    first map to merge
+    * @param {Object} second
+    *    second map to merge
+    *
+    * @return {Object}
+    *    the result of the merging
     */
    function merge( first, second ) {
       var resultMap = {};
@@ -1115,6 +1157,26 @@ define( 'laxar-patterns/lib/patches',[
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+   /** @private */
+   function clean( object ) {
+      if( object === null ) {
+         return object;
+      }
+      for( var key in object ) {
+         if( object.hasOwnProperty( key ) ) {
+            if( key.charAt( 0 ) === '$' && key.charAt( 1 ) === '$' ) {
+               delete object[ key ];
+            }
+            else if( typeof object[ key ] === 'object' ) {
+               clean( object[ key ] );
+            }
+         }
+      }
+      return object;
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
    return {
 
       apply: apply,
@@ -1132,27 +1194,32 @@ define( 'laxar-patterns/lib/patches',[
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
+/**
+ * This module provides helpers for patterns regarding *didReplace* and *didUpdate* events.
+ *
+ * Definition of the `context` object mentioned throughout this api:
+ *
+ * In the simplest case this can be the AngularJS `$scope` passed into a widget. Technically this can be
+ * any object exposing these three properties:
+ * - `eventBus`: The event bus instance used for event subscriptions and publishing events
+ * - `features`: The configuration of the widget, used for automagical resource handling
+ * - `resources`: An object where all registered resources and updates to them are written to. Will be
+ *   added if it doesn't exist.
+ *
+ * @module resources
+ */
 define( 'laxar-patterns/lib/resources',[
    'angular',
    'laxar',
-   './patches',
-   'json-patch'
-], function( ng, ax, patches, jsonPatch ) {
+   'json-patch',
+   './patches'
+], function( ng, ax, jsonPatch, patches ) {
    'use strict';
 
    var assert = ax.assert;
    var $q;
 
-   /**
-    * What is the `context` object mentioned throughout the api:
-    * In the simplest case this can be the AngularJS `$scope` passed into a widget. Technically this can be
-    * any object exposing these three properties:
-    * - `eventBus`: The event bus instance used for event subscriptions and publishing events
-    * - `features`: The configuration of the widget, used for automagical resource handling
-    * - `resources`: An object where all registered resources and updates to them are written to. Will be
-    *                added if it doesn't exist.
-    */
-
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    /**
     * Creates and returns a simple handler function for didReplace events. Replaces will be written to
@@ -1215,7 +1282,7 @@ define( 'laxar-patterns/lib/resources',[
    /**
     * Creates and returns a function to publish didReplace events for the resource found as feature
     * configuration. Resolution of the `featurePath` argument works just as explained in the documentation for
-    * `ResourceHandler.prototype.registerResourceFromFeature`. The publisher returns the promise returned by
+    * {@link ResourceHandler#registerResourceFromFeature}. The publisher returns the promise returned by
     * the underlying event bus call.
     *
     * @param {Object} context
@@ -1225,11 +1292,11 @@ define( 'laxar-patterns/lib/resources',[
     * @param {Object} [optionalOptions]
     *    options for the publisher
     * @param {Boolean} optionalOptions.deliverToSender
-    *    the value is forward to `eventBus.publish`: if `true` the event will also be delivered to the
+    *    the value is forwarded to `eventBus.publish`: if `true` the event will also be delivered to the
     *    publisher. Default is `false`
     *
     * @return {Function}
-    *    the publisher function. Takes the data to publish as single argument.
+    *    the publisher function. Takes the data to publish as single argument
     */
    function replacePublisherForFeature( context, featurePath, optionalOptions ) {
       assert( context ).hasType( Object ).isNotNull();
@@ -1257,12 +1324,12 @@ define( 'laxar-patterns/lib/resources',[
    /**
     * Creates and returns a function to publish didUpdate events for the resource found as feature
     * configuration. Resolution of the `featurePath` argument works just as explained in the documentation for
-    * `ResourceHandler.prototype.registerResourceFromFeature`. The publisher returns the promise returned by
+    * {@link ResourceHandler#registerResourceFromFeature}. The publisher returns the promise returned by
     * the underlying event bus call. The returned function only accepts one argument, which is the JSON patch
-    * array.
+    * sequence conforming to [RFC 6902](https://tools.ietf.org/html/rfc6902).
     *
     * Example:
-    * ```
+    * ```js
     * var publisher = resources.updatePublisherForFeature( context, path );
     * publisher( [
     *    { op: 'remove', path: '/accounts/2' },
@@ -1272,16 +1339,16 @@ define( 'laxar-patterns/lib/resources',[
     *
     * Additionally the returned function has a method `compareAndPublish` that accepts the previous version of
     * a resource as first argument and the current version of the resource as second argument. It then creates
-    * the JSON patch array itself and sends the according didUpdate event. It also returns the promise
+    * the JSON patch sequence itself and sends the according didUpdate event. It also returns the promise
     * returned by the underlying event bus call.
     *
     * Example:
-    * ```
+    * ```js
     * var publisher = resources.updatePublisherForFeature( context, path );
     * publisher.compareAndPublish( obsoleteVersion, currentVersion );
     * ```
     *
-    * Note that a generic generation of patches might lead to strange, large patch lists, especially when
+    * Note that a generic generation of patches might lead to strange, large patch sequences, especially when
     * removing entries. The diff library doesn't know about identities and as such won't recognize where a
     * specific element was removed. As a consequence instead of generating a remove operation, this could
     * result in a very large number of replace operations that shift the properties from successors to the
@@ -1352,7 +1419,7 @@ define( 'laxar-patterns/lib/resources',[
     *    it can do the event handling
     *
     * @return {ResourceHandler}
-    *    not `null`
+    *    a resource handler instance
     */
    function handlerFor( context ) {
       return new ResourceHandler( context );
@@ -1360,6 +1427,13 @@ define( 'laxar-patterns/lib/resources',[
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+   /**
+    *
+    * @param context
+    *
+    * @constructor
+    * @private
+    */
    function ResourceHandler( context ) {
       this.context_ = context;
       this.externalHandlers_ = {};
@@ -1370,282 +1444,280 @@ define( 'laxar-patterns/lib/resources',[
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-   ResourceHandler.prototype = {
-
-      /**
-       * Registers default event handlers for a feature. The `feature` argument is interpreted as attribute
-       * path to an object having a `resource` property of type string holding the name of the resource to
-       * register the handler for. All replacements and updates will be written to `context.resources` by the
-       * rules written at `options.modelKey` doc.
-       *
-       * Example:
-       * Consider the following configuration:
-       * ```
-       *     features: {
-       *        someFeature: {
-       *           someResourceConfig: {
-       *              resource: 'myResource'
-       *           }
-       *        }
-       *     }
-       * ```
-       * The according call using an AngularJS Scope as context would be (providing none of the options):
-       * ```
-       *     patterns.resources,handlerFor( $scope )
-       *         .registerResourceFromFeature( 'someFeature.someResourceConfig' );
-       * ```
-       *
-       * @param {String} featurePath
-       *    the attribute path to the feature for the resource
-       * @param {Object} [options]
-       *    options and callbacks to use
-       * @param {Function|Function[]} options.onReplace
-       *    a function or a list of functions to call when a didReplace event is received. Each function
-       *    receives the event object as argument. If `options.omitFirstReplace` is `true`, it is only called
-       *    first the second time a didReplace event occurs.
-       * @param {Function|Function[]} options.onUpdate
-       *    a function or a list of functions to call when a didUpdate event is received. Each function
-       *    receives the event object as argument.
-       * @param {Function|Function[]} options.onUpdateReplace
-       *    a function or a list of functions to call when a didUpdate or a didReplace event is received. Each
-       *    function receives the event object as argument. If `options.omitFirstReplace` is `true`, it is
-       *    only called first for didReplace events the second time such an event occurs.
-       * @param {Boolean} options.omitFirstReplace
-       *    if `true` `options.onReplace` is only called after the
-       *    first time a didReplace event occurred. Default is `false`
-       * @param {String} options.modelKey
-       *    the key to use for the resource in `context.resources`. If not given the last path fragment of
-       *    `featurePath` is used. For example if the path is `myfeature.superResource` the key will be
-       *    `superResource`.
-       * @param {Boolean} options.isOptional
-       *    If set to `true`, missing configuration for this resource is silently ignored and no handlers
-       *    are registered. If set to `false`, an error will be raised in this case (default is `false`).
-       *
-       * @return {ResourceHandler}
-       *    this instance
-       */
-      registerResourceFromFeature: function( featurePath, options ) {
-         var resource = ax.object.path( this.context_.features, featurePath + '.resource', null );
-         options = ax.object.options( options, { isOptional: false } );
-         if( resource === null && !!options.isOptional ) {
-            return this;
-         }
-         assert( resource ).isNotNull( 'Could not find resource configuration in features for "' + featurePath + '"' );
-
-         if( !options.modelKey ) {
-            options.modelKey = featurePath.substr( featurePath.lastIndexOf( '.' ) + 1 );
-         }
-
-         return this.registerResource( resource, options );
-      },
-
-      ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-      /**
-       * Registers default event handlers for a known resource name. All replacements and updates will be
-       * written to `context.resources`.
-       *
-       * @param {String} resource
-       *    the resource the handler should be registered for
-       * @param {Object} [options]
-       *    options and callbacks to use
-       * @param {Function|Function[]} options.onReplace
-       *    a function or a list of functions to call when a didReplace event is received. Each function
-       *    receives the event object as argument. If `options.omitFirstReplace` is `true`, it is only called
-       *    first the second time a didReplace event occurs.
-       * @param {Function|Function[]} options.onUpdate
-       *    a function or a list of functions to call when a didUpdate event is received. Each function
-       *    receives the event object as argument.
-       * @param {Function|Function[]} options.onUpdateReplace
-       *    a function or a list of functions to call when a didUpdate or a didReplace event is received. Each
-       *    function receives the event object as argument. If `options.omitFirstReplace` is `true`, it is
-       *    only called first for didReplace events the second time such an event occurs.
-       * @param {Boolean} options.omitFirstReplace
-       *    if `true` `options.onReplace` is only called after the first time a didReplace event occurred.
-       *    Default is `false`
-       * @param {String} options.modelKey
-       *    the key to use for the resource in `context.resources`. If not given the value of `resource` is
-       *    used.
-       *
-       * @return {ResourceHandler}
-       *    this instance
-       */
-      registerResource: function( resource, options ) {
-         assert( resource ).hasType( String ).isNotNull();
-
-         options = ax.object.options( options, {
-            omitFirstReplace: false,
-            modelKey: resource
-         } );
-         this.waitingFor_.push( resource );
-         this.registerResourceHandlers_( resource, options );
-
-         if( !( resource in this.modelHandlers_ ) ) {
-            this.modelHandlers_[ resource ] = {};
-         }
-
-         this.registerForReplace_( resource, options );
-         this.registerForUpdate_( resource, options );
-
+   /**
+    * Registers default event handlers for a feature. The `feature` argument is interpreted as attribute
+    * path to an object having a `resource` property of type string holding the name of the resource to
+    * register the handler for. All replacements and updates will be written to `context.resources` by the
+    * rules written at `options.modelKey` doc.
+    *
+    * Example:
+    * Consider the following configuration:
+    * ```json
+    * {
+    *    "features": {
+    *       "someFeature": {
+    *          "someResourceConfig": {
+    *             "resource": "myResource"
+    *          }
+    *       }
+    *    }
+    * }
+    * ```
+    * The according call, using an AngularJS Scope as context, would be (providing none of the options):
+    * ```js
+    * patterns.resources,handlerFor( $scope )
+    *    .registerResourceFromFeature( 'someFeature.someResourceConfig' );
+    * ```
+    *
+    * @param {String} featurePath
+    *    the attribute path to the feature for the resource
+    * @param {Object} [optionalOptions]
+    *    options and callbacks to use
+    * @param {Function|Function[]} optionalOptions.onReplace
+    *    a function or a list of functions to call when a didReplace event is received. Each function
+    *    receives the event object as argument. If `options.omitFirstReplace` is `true`, it is only called
+    *    first the second time a didReplace event occurs
+    * @param {Function|Function[]} optionalOptions.onUpdate
+    *    a function or a list of functions to call when a didUpdate event is received. Each function
+    *    receives the event object as argument
+    * @param {Function|Function[]} optionalOptions.onUpdateReplace
+    *    a function or a list of functions to call when a didUpdate or a didReplace event is received. Each
+    *    function receives the event object as argument. If `options.omitFirstReplace` is `true`, it is
+    *    only called first for didReplace events the second time such an event occurs
+    * @param {Boolean} optionalOptions.omitFirstReplace
+    *    if `true` `options.onReplace` is only called after the
+    *    first time a didReplace event occurred. Default is `false`
+    * @param {String} optionalOptions.modelKey
+    *    the key to use for the resource in `context.resources`. If not given the last path fragment of
+    *    `featurePath` is used. For example if the path is `myfeature.superResource` the key will be
+    *    `superResource`
+    * @param {Boolean} optionalOptions.isOptional
+    *    if set to `true`, missing configuration for this resource is silently ignored and no handlers
+    *    are registered. If set to `false`, an error will be raised in this case (default is `false`)
+    *
+    * @return {ResourceHandler}
+    *    this instance for chaining
+    */
+   ResourceHandler.prototype.registerResourceFromFeature = function( featurePath, optionalOptions ) {
+      var resource = ax.object.path( this.context_.features, featurePath + '.resource', null );
+      optionalOptions = ax.object.options( optionalOptions, { isOptional: false } );
+      if( resource === null && !!optionalOptions.isOptional ) {
          return this;
-      },
+      }
+      assert( resource ).isNotNull( 'Could not find resource configuration in features for "' + featurePath + '"' );
 
-      ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-      /**
-       * Registers a callback that is called once all resources were initially replaced. If more resource
-       * handlers are registered before all relevant didReplace events were received, those are also waited
-       * for.
-       *
-       * @param {Function} callback
-       *     the function to call
-       * @param {Boolean} [options]
-       *    an optional set of parameters to specify watch behavior
-       * @param {Boolean} options.watch
-       *    if `true`, the callback will be called again whenever resources are modified after all were
-       *    replaced at least once.
-       *
-       * @return {ResourceHandler}
-       *    this instance
-       */
-      whenAllWereReplaced: function( callback, options ) {
-         assert( callback ).hasType( Function ).isNotNull();
-
-         this.allReplacedCallback_ = options && options.watch ? callback : onceCallback;
-
-         return this;
-
-         function onceCallback() {
-            callback();
-            callback = function() {};
-         }
-      },
-
-      ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-      /**
-       * Allows to find out if there are still outstanding resources, or if all resources have been replaced.
-       * Can be used in update-/replace-handlers to determine if all dependencies are satisfied.
-       *
-       * @return {Boolean}
-       *    `true` if all resources registered with this handler (so far) have been replaced at least once,
-       *    `false` if there are still outstanding resources.
-       */
-      wereAllReplaced: function() {
-         return !this.waitingFor_.length;
-      },
-
-      ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-      /**
-       *
-       * @private
-       */
-      registerResourceHandlers_: function( resource, options ) {
-         if( !this.externalHandlers_[ resource ] ) {
-            this.externalHandlers_[ resource ] = {
-               onReplace: [],
-               onUpdate: []
-            };
-         }
-
-         appendFunctionOrArrayOfFunctions( this.externalHandlers_[ resource ].onUpdate, options.onUpdate );
-         appendFunctionOrArrayOfFunctions( this.externalHandlers_[ resource ].onUpdate, options.onUpdateReplace );
-
-         var replaceHandlers = [];
-         appendFunctionOrArrayOfFunctions( replaceHandlers, options.onReplace );
-         appendFunctionOrArrayOfFunctions( replaceHandlers, options.onUpdateReplace );
-
-         if( options.omitFirstReplace ) {
-            replaceHandlers = replaceHandlers.map( function( handler ) {
-               return ignoringFirstCall( handler );
-            } );
-         }
-
-         function ignoringFirstCall( f ) {
-            var ignore = true;
-            return function() {
-               if( !ignore ) { return f.apply( this, arguments ); }
-               ignore = false;
-            };
-         }
-
-         appendFunctionOrArrayOfFunctions( this.externalHandlers_[ resource ].onReplace, replaceHandlers );
-      },
-
-      ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-      /**
-       *
-       * @private
-       */
-      registerForReplace_: function( resource, options ) {
-         var handler = replaceHandler( this.context_, options.modelKey );
-         if( this.modelHandlers_[ resource ].onReplace ) {
-            this.modelHandlers_[ resource ].onReplace.push( handler );
-            return;
-         }
-         this.modelHandlers_[ resource ].onReplace = [ handler ];
-
-         this.context_.eventBus.subscribe( 'didReplace.' + resource, function( event ) {
-            var changed = this.modelHandlers_[ resource ].onReplace.reduce( function( changed, handler ) {
-               return handler( event ) || changed;
-            }, false );
-            if( !changed ) {
-               return;
-            }
-
-            try {
-               this.externalHandlers_[ resource ].onReplace.forEach( function( handler ) {
-                  handler( event );
-               } );
-            }
-            finally {
-               this.waitingFor_.splice( this.waitingFor_.indexOf( resource ), 1 );
-               if( !this.waitingFor_.length ) {
-                  this.allReplacedCallback_();
-               }
-            }
-
-         }.bind( this ) );
-      },
-
-      ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-      /**
-       *
-       * @private
-       */
-      registerForUpdate_: function( resource, options ) {
-         var handler = updateHandler( this.context_, options.modelKey );
-         if( this.modelHandlers_[ resource ].onUpdate ) {
-            this.modelHandlers_[ resource ].onUpdate.push( handler );
-            return;
-         }
-         this.modelHandlers_[ resource ].onUpdate = [ handler ];
-
-         this.context_.eventBus.subscribe( 'didUpdate.' + resource, function( event ) {
-            var changed = this.modelHandlers_[ resource ].onUpdate.reduce( function( changed, handler ) {
-               return handler( event ) || changed;
-            }, false );
-            if( !changed ) {
-               return;
-            }
-
-            try {
-               this.externalHandlers_[ resource ].onUpdate.forEach( function( handler ) {
-                  handler( event );
-               } );
-            }
-            finally {
-               if( !this.waitingFor_.length ) {
-                  this.allReplacedCallback_();
-               }
-            }
-         }.bind( this ) );
+      if( !optionalOptions.modelKey ) {
+         optionalOptions.modelKey = featurePath.substr( featurePath.lastIndexOf( '.' ) + 1 );
       }
 
+      return this.registerResource( resource, optionalOptions );
    };
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   /**
+    * Registers default event handlers for a known resource name. All replacements and updates will be
+    * written to `context.resources`.
+    *
+    * @param {String} resource
+    *    the resource the handler should be registered for
+    * @param {Object} [optionalOptions]
+    *    options and callbacks to use
+    * @param {Function|Function[]} optionalOptions.onReplace
+    *    a function or a list of functions to call when a didReplace event is received. Each function
+    *    receives the event object as argument. If `options.omitFirstReplace` is `true`, it is only called
+    *    first the second time a didReplace event occurs
+    * @param {Function|Function[]} optionalOptions.onUpdate
+    *    a function or a list of functions to call when a didUpdate event is received. Each function
+    *    receives the event object as argument
+    * @param {Function|Function[]} optionalOptions.onUpdateReplace
+    *    a function or a list of functions to call when a didUpdate or a didReplace event is received. Each
+    *    function receives the event object as argument. If `options.omitFirstReplace` is `true`, it is
+    *    only called first for didReplace events the second time such an event occurs
+    * @param {Boolean} optionalOptions.omitFirstReplace
+    *    if `true` `options.onReplace` is only called after the first time a didReplace event occurred.
+    *    Default is `false`
+    * @param {String} optionalOptions.modelKey
+    *    the key to use for the resource in `context.resources`. If not given the value of `resource` is
+    *    used
+    *
+    * @return {ResourceHandler}
+    *    this instance for chaining
+    */
+   ResourceHandler.prototype.registerResource = function( resource, optionalOptions ) {
+      assert( resource ).hasType( String ).isNotNull();
+
+      optionalOptions = ax.object.options( optionalOptions, {
+         omitFirstReplace: false,
+         modelKey: resource
+      } );
+      this.waitingFor_.push( resource );
+      registerResourceHandlers( this, resource, optionalOptions );
+
+      if( !( resource in this.modelHandlers_ ) ) {
+         this.modelHandlers_[ resource ] = {};
+      }
+
+      registerForReplace( this,  resource, optionalOptions );
+      registerForUpdate( this, resource, optionalOptions );
+
+      return this;
+   };
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   /**
+    * Registers a callback that is called once all resources were initially replaced. If more resource
+    * handlers are registered before all relevant didReplace events were received, those are also waited
+    * for.
+    *
+    * @param {Function} callback
+    *     the function to call
+    * @param {Boolean} [optionalOptions]
+    *    an optional set of parameters to specify watch behavior
+    * @param {Boolean} optionalOptions.watch
+    *    if `true`, the callback will be called again whenever resources are modified after all were
+    *    replaced at least once
+    *
+    * @return {ResourceHandler}
+    *    this instance for chaining
+    */
+   ResourceHandler.prototype.whenAllWereReplaced = function( callback, optionalOptions ) {
+      assert( callback ).hasType( Function ).isNotNull();
+
+      this.allReplacedCallback_ = optionalOptions && optionalOptions.watch ? callback : onceCallback;
+
+      return this;
+
+      function onceCallback() {
+         callback();
+         callback = function() {};
+      }
+   };
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   /**
+    * Allows to find out if there are still outstanding resources, or if all resources have been replaced.
+    * Can be used in update-/replace-handlers to determine if all dependencies are satisfied.
+    *
+    * @return {Boolean}
+    *    `true` if all resources registered with this handler (so far) have been replaced at least once,
+    *    `false` if there are still outstanding resources
+    */
+   ResourceHandler.prototype.wereAllReplaced = function() {
+      return !this.waitingFor_.length;
+   };
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   /**
+    *
+    * @private
+    */
+   function registerResourceHandlers( self, resource, options ) {
+      if( !self.externalHandlers_[ resource ] ) {
+         self.externalHandlers_[ resource ] = {
+            onReplace: [],
+            onUpdate: []
+         };
+      }
+
+      appendFunctionOrArrayOfFunctions( self.externalHandlers_[ resource ].onUpdate, options.onUpdate );
+      appendFunctionOrArrayOfFunctions( self.externalHandlers_[ resource ].onUpdate, options.onUpdateReplace );
+
+      var replaceHandlers = [];
+      appendFunctionOrArrayOfFunctions( replaceHandlers, options.onReplace );
+      appendFunctionOrArrayOfFunctions( replaceHandlers, options.onUpdateReplace );
+
+      if( options.omitFirstReplace ) {
+         replaceHandlers = replaceHandlers.map( function( handler ) {
+            return ignoringFirstCall( handler );
+         } );
+      }
+
+      function ignoringFirstCall( f ) {
+         var ignore = true;
+         return function() {
+            if( !ignore ) { return f.apply( self, arguments ); }
+            ignore = false;
+         };
+      }
+
+      appendFunctionOrArrayOfFunctions( self.externalHandlers_[ resource ].onReplace, replaceHandlers );
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   /**
+    *
+    * @private
+    */
+   function registerForReplace( self, resource, options ) {
+      var handler = replaceHandler( self.context_, options.modelKey );
+      if( self.modelHandlers_[ resource ].onReplace ) {
+         self.modelHandlers_[ resource ].onReplace.push( handler );
+         return;
+      }
+      self.modelHandlers_[ resource ].onReplace = [ handler ];
+
+      self.context_.eventBus.subscribe( 'didReplace.' + resource, function( event ) {
+         var changed = self.modelHandlers_[ resource ].onReplace.reduce( function( changed, handler ) {
+            return handler( event ) || changed;
+         }, false );
+         if( !changed ) {
+            return;
+         }
+
+         try {
+            self.externalHandlers_[ resource ].onReplace.forEach( function( handler ) {
+               handler( event );
+            } );
+         }
+         finally {
+            self.waitingFor_.splice( self.waitingFor_.indexOf( resource ), 1 );
+            if( !self.waitingFor_.length ) {
+               self.allReplacedCallback_();
+            }
+         }
+
+      } );
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   /**
+    *
+    * @private
+    */
+   function registerForUpdate( self, resource, options ) {
+      var handler = updateHandler( self.context_, options.modelKey );
+      if( self.modelHandlers_[ resource ].onUpdate ) {
+         self.modelHandlers_[ resource ].onUpdate.push( handler );
+         return;
+      }
+      self.modelHandlers_[ resource ].onUpdate = [ handler ];
+
+      self.context_.eventBus.subscribe( 'didUpdate.' + resource, function( event ) {
+         var changed = self.modelHandlers_[ resource ].onUpdate.reduce( function( changed, handler ) {
+            return handler( event ) || changed;
+         }, false );
+         if( !changed ) {
+            return;
+         }
+
+         try {
+            self.externalHandlers_[ resource ].onUpdate.forEach( function( handler ) {
+               handler( event );
+            } );
+         }
+         finally {
+            if( !self.waitingFor_.length ) {
+               self.allReplacedCallback_();
+            }
+         }
+      } );
+   }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1764,15 +1836,21 @@ define( 'laxar-patterns/lib/resources',[
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
+/**
+ * This module provides helpers for creating event objects to be used with *didValidate* events.
+ *
+ * Validation messages can have one of the following structures:
+ * - A simple html message object (locale to string mapping). It will get a default level of *ERROR*.
+ * - A html message object as required by the messages widget consisting of a html message object under the
+ *   key *htmlMessage* and a level under the key *level*.
+ *
+ * @module validation
+ */
 define( 'laxar-patterns/lib/validation',[], function() {
    'use strict';
 
    /**
     * @private
-    * @param resource
-    * @param htmlMessages
-    * @param outcome
-    * @returns {{resource: *, data: Array, outcome: *}}
     */
    function createEvent( resource, htmlMessages, outcome ) {
       var data = [];
@@ -1800,9 +1878,6 @@ define( 'laxar-patterns/lib/validation',[], function() {
 
    /**
     * @private
-    * @param messages
-    * @param args
-    * @returns {*}
     */
    function messagesFromArgs( messages, args ) {
       if( Array.isArray( messages ) ) {
@@ -1818,15 +1893,13 @@ define( 'laxar-patterns/lib/validation',[], function() {
       /**
        * Creates and returns an event resembling a successful validation result.
        *
-       * @param {String} resource name of the validated resource
-       * @param {Object[]|...Object} htmlMessages messages associated with the result.
-       *                                Messages can have one of the following structures:
-       *                                1. A simple html message object (locale to string mapping). It will
-       *                                   get a default level of *ERROR*.
-       *                                2. A html message object as required by the messages widget consisting
-       *                                   of a html message object under the key *htmlMessage* and a level
-       *                                   under the key *level*.
-       * @returns {Object} the validation event
+       * @param {String} resource
+       *    name of the validated resource
+       * @param {Object[]|...Object} htmlMessages
+       *    messages associated with the result. They should have the structure as described in the module
+       *
+       * @return {Object}
+       *    the validation event
        */
       successEvent: function( resource, htmlMessages ) {
          return createEvent( resource, messagesFromArgs( htmlMessages, arguments ), 'SUCCESS' );
@@ -1838,14 +1911,11 @@ define( 'laxar-patterns/lib/validation',[], function() {
        * Creates and returns an event resembling the result of a validation with errors.
        *
        * @param {String} resource name of the validated resource
-       * @param {Object[]|...Object} htmlMessages messages associated with the result.
-       *                                Messages can have one of the following structures:
-       *                                1. A simple html message object (locale to string mapping). It will
-       *                                   get a default level of *ERROR*.
-       *                                2. A html message object as required by the messages widget consisting
-       *                                   of a html message object under the key *htmlMessage* and a level
-       *                                   under the key *level*.
-       * @returns {Object} the validation event
+       * @param {Object[]|...Object} htmlMessages
+       *    messages associated with the result. They should have the structure as described in the module
+       *
+       * @return {Object}
+       *    the validation event
        */
       errorEvent: function( resource, htmlMessages ) {
          return createEvent( resource, messagesFromArgs( htmlMessages, arguments ), 'ERROR' );
@@ -1854,14 +1924,20 @@ define( 'laxar-patterns/lib/validation',[], function() {
    };
 
 } );
+
 /**
  * Copyright 2014 aixigo AG
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
+/**
+ * This module provides helpers for patterns regarding *changeAreaVisibilityRequest* and
+ * *didChangeAreaVisibility* events.
+ *
+ * @module visibility
+ */
 define( 'laxar-patterns/lib/visibility',[
-   'laxar',
-   './patches'
+   'laxar'
 ], function( ax ) {
    'use strict';
 
@@ -1871,25 +1947,26 @@ define( 'laxar-patterns/lib/visibility',[
     * @param {Object} scope
     *    the scope the handler should work with. It is expected to find an `eventBus` property there with
     *    which it can do the event handling. The visibility handler will manage the boolean scope property
-    *    `isVisible` which can be used to determine the visibility state of the entire widget.
-    * @param {Object=} optionalOptions
+    *    `isVisible` which can be used to determine the visibility state of the entire widget
+    * @param {Object} [optionalOptions]
     *    additional options to pass to the visibility handler
-    * @param {Function=} optionalOptions.onChange
+    * @param {Function} optionalOptions.onChange
     *    a handler to call when a `didChangeAreaVisibility` request for this widget's container was received,
     *    and the visibility of this widget was changed
-    * @param {Function=} optionalOptions.onShow
+    * @param {Function} optionalOptions.onShow
     *    a handler to call when a `didChangeAreaVisibility` request for this widget's container was received,
     *    and the visibility of this widget was changed to `true`
-    * @param {Function=} optionalOptions.onHide
+    * @param {Function} optionalOptions.onHide
     *    a handler to call when a `didChangeAreaVisibility` request for this widget's container was received,
     *    and the visibility of this widget was changed to `false`
-    * @param {Function=} optionalOptions.onAnyAreaRequest
+    * @param {Function} optionalOptions.onAnyAreaRequest
     *    a handler for any `changeAreaVisibilityRequest` to this widget's areas
     *    The handler must
     *     * _either_ return `true`/`false` to indicate visibility synchronously
     *     * _or_ issue a will/did-response for the area when called
     *
-    * @returns {VisibilityHandler} not `null`
+    * @return {VisibilityHandler}
+    *    a visibility handler instance
     */
    function handlerFor( scope, optionalOptions ) {
       return new VisibilityHandler( scope, optionalOptions );
@@ -1897,6 +1974,14 @@ define( 'laxar-patterns/lib/visibility',[
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+   /**
+    *
+    * @param scope
+    * @param optionalOptions
+    *
+    * @constructor
+    * @private
+    */
    function VisibilityHandler( scope, optionalOptions ) {
       this.scope_ = scope;
       scope.isVisible = false;
@@ -1929,31 +2014,29 @@ define( 'laxar-patterns/lib/visibility',[
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-   VisibilityHandler.prototype = {
-      /**
-       * Handle change-visibility-requests for a specific area, using a callback.
-       *
-       * @param {String} areaName
-       *    the name of the area for which to handle visibility events
-       * @param {Object=} optionalOptions
-       *    additional options to pass to the visibility handler
-       * @param {Function=} optionalOptions.onRequest
-       *    a callback for any `changeAreaVisibilityRequest` to this area
-       *    The callback may issue a will/did-response for the area when called, or return a boolean which
-       *    causes the visibility handler to respond accordingly.
-       *    This should not be used in conjunction with the global `onAnyAreaRequest`-option of the handler.
-       *
-       * @return {VisibilityHandler}
-       *    this visibility handler (for chaining)
-       */
-      registerArea: function( areaName, optionalOptions ) {
-         var options = ax.object.options( optionalOptions, {} );
-         if( options.onRequest ) {
-            var requestEvent = [ 'changeAreaVisibilityRequest', areaName ].join( '.' );
-            this.scope_.eventBus.subscribe( requestEvent,responder( this, options.onRequest ) );
-         }
-         return this;
+   /**
+    * Handle change-visibility-requests for a specific area, using a callback.
+    *
+    * @param {String} areaName
+    *    the name of the area for which to handle visibility events
+    * @param {Object=} optionalOptions
+    *    additional options to pass to the visibility handler
+    * @param {Function=} optionalOptions.onRequest
+    *    a callback for any `changeAreaVisibilityRequest` to this area. The callback may issue a
+    *    will/did-response for the area when called, or return a boolean which causes the visibility handler
+    *    to respond accordingly. This should not be used in conjunction with the global
+    *    `onAnyAreaRequest`-option of the handler
+    *
+    * @return {VisibilityHandler}
+    *    this instance for chaining
+    */
+   VisibilityHandler.prototype.registerArea = function( areaName, optionalOptions ) {
+      var options = ax.object.options( optionalOptions, {} );
+      if( options.onRequest ) {
+         var requestEvent = [ 'changeAreaVisibilityRequest', areaName ].join( '.' );
+         this.scope_.eventBus.subscribe( requestEvent,responder( this, options.onRequest ) );
       }
+      return this;
    };
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1963,7 +2046,10 @@ define( 'laxar-patterns/lib/visibility',[
          var result = callback( event );
          if( result === true || result === false ) {
             var didEvent = [ 'didChangeAreaVisibility', event.area, result ].join( '.' );
-            self.scope_.eventBus.publish( didEvent, { area: event.area, visible: result }, { deliverToSender: false } );
+            self.scope_.eventBus.publish( didEvent, {
+               area: event.area,
+               visible: result
+            }, { deliverToSender: false } );
          }
       };
    }
@@ -1975,6 +2061,7 @@ define( 'laxar-patterns/lib/visibility',[
     *
     * @param {Object} scope
     *    a scope (with `widget` and `eventBus` properties)
+    *
     * @return {Function}
     *    a function of boolean that requests for widget visibility to be set to the given state
     */
@@ -2003,7 +2090,8 @@ define( 'laxar-patterns/lib/visibility',[
     */
    function requestPublisherForArea( scope, area ) {
       return function publish( visible ) {
-         return scope.eventBus.publishAndGatherReplies( [ 'changeAreaVisibilityRequest', area, visible ].join( '.' ), {
+         var eventName = [ 'changeAreaVisibilityRequest', area, visible ].join( '.' );
+         return scope.eventBus.publishAndGatherReplies( eventName, {
             area: area,
             visible: visible
          }, { deliverToSender: false } );
