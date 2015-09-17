@@ -490,7 +490,7 @@ define( 'laxar-patterns/lib/flags',[
     *    example `flags.myFlag` would set `scope.flags.myFlag` to the currently valid accumulated state
     * @param {String} optionalOptions.predicate
     *    one of these:
-    *    - `any`: if any of the flag's states is `true`, the accumulated state is `true. This is the default
+    *    - `any`: if any of the flag's states is `true`, the accumulated state is `true`. This is the default
     *    - `all`: if all of the flag's states are `true`, the accumulated state is `true`
     *
     * @return {FlagHandler}
@@ -524,7 +524,7 @@ define( 'laxar-patterns/lib/flags',[
     *    example `flags.myFlag` would set `scope.flags.myFlag` to the currently valid accumulated state
     * @param {String} optionalOptions.predicate
     *    one of these:
-    *    - `any`: if any of the flag's sates is `true`, the accumulated state is `true. This is the default
+    *    - `any`: if any of the flag's sates is `true`, the accumulated state is `true`. This is the default
     *    - `all`: if all of the flag's states are `true`, the accumulated state is `true`
     *
     * @return {FlagHandler}
@@ -796,7 +796,7 @@ define( 'laxar-patterns/lib/i18n',[
 } );
 
 /**
- * Copyright 2014 aixigo AG
+ * Copyright 2015 aixigo AG
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
@@ -943,16 +943,16 @@ define( 'laxar-patterns/lib/json',[
    /**
     * Calls fast-json-patch to create a rfc-6902 conform JSON patch sequence.
     *
-    * @param {Object|Array} objectA
-    *    the first item for comparison
-    * @param {Object|Array} objectB
-    *    the second item for comparison
+    * @param {Object|Array} fromState
+    *    the state on which to base the list of patches
+    * @param {Object|Array} toState
+    *    the target state: the desired result of applying the newly created patches to the `fromState`
     *
     * @return {Array}
     *    a sequence of patches as defined by rfc-6902
     */
-   function createPatch( objectA, objectB ) {
-      return jsonPatch.compare( objectA, objectB );
+   function createPatch( fromState, toState ) {
+      return jsonPatch.compare( fromState, toState );
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1190,7 +1190,7 @@ define( 'laxar-patterns/lib/patches',[
 } );
 
 /**
- * Copyright 2014 aixigo AG
+ * Copyright 2015 aixigo AG
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
@@ -1217,7 +1217,6 @@ define( 'laxar-patterns/lib/resources',[
    'use strict';
 
    var assert = ax.assert;
-   var $q;
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1294,6 +1293,9 @@ define( 'laxar-patterns/lib/resources',[
     * @param {Boolean} optionalOptions.deliverToSender
     *    the value is forwarded to `eventBus.publish`: if `true` the event will also be delivered to the
     *    publisher. Default is `false`
+    * @param {Boolean} optionalOptions.isOptional
+    *    if `true`, don't throw an error if `featurePath.resource` is missing. Instead return a publisher
+    *    that doesn't do anything when called. Default is `false`.
     *
     * @return {Function}
     *    the publisher function. Takes the data to publish as single argument
@@ -1302,12 +1304,15 @@ define( 'laxar-patterns/lib/resources',[
       assert( context ).hasType( Object ).isNotNull();
       assert( context.eventBus ).hasType( Object ).isNotNull();
 
-      var resourceName = ax.object.path( context.features, featurePath + '.resource' );
-      assert( resourceName ).hasType( String ).isNotNull();
-
       var options = ax.object.options( optionalOptions, {
          deliverToSender: false
       } );
+
+      var resourceName = ax.object.path( context.features, featurePath + '.resource' );
+      if( !resourceName && options.isOptional ) {
+         return resolvedPromise;
+      }
+      assert( resourceName ).hasType( String ).isNotNull();
 
       return function didReplacePublisher( replacement ) {
          return context.eventBus.publish( 'didReplace.' + resourceName, {
@@ -1365,6 +1370,9 @@ define( 'laxar-patterns/lib/resources',[
     * @param {Boolean} optionalOptions.deliverToSender
     *    the value is forward to `eventBus.publish`: if `true` the event will also be delivered to the
     *    publisher. Default is `false`
+    * @param {Boolean} optionalOptions.isOptional
+    *    if `true`, don't throw an error if `featurePath.resource` is missing. Instead return a publisher
+    *    that doesn't do anything when called. Default is `false`.
     *
     * @return {Function}
     *    the publisher function as described above
@@ -1373,12 +1381,21 @@ define( 'laxar-patterns/lib/resources',[
       assert( context ).hasType( Object ).isNotNull();
       assert( context.eventBus ).hasType( Object ).isNotNull();
 
-      var resourceName = ax.object.path( context.features, featurePath + '.resource' );
-      assert( resourceName ).hasType( String ).isNotNull();
-
       var options = ax.object.options( optionalOptions, {
          deliverToSender: false
       } );
+
+      var resourceName = ax.object.path( context.features, featurePath + '.resource' );
+      if( !resourceName && options.isOptional ) {
+         var noopPublisher = function() {
+            return resolvedPromise();
+         };
+         noopPublisher.compareAndPublish = function() {
+            return noopPublisher();
+         };
+         return noopPublisher;
+      }
+      assert( resourceName ).hasType( String ).isNotNull();
 
       var publisher = function( patches ) {
          assert( patches ).hasType( Array ).isNotNull();
@@ -1388,8 +1405,7 @@ define( 'laxar-patterns/lib/resources',[
                'updatePublisher: Not sending empty didUpdate to resource "[0]" from sender "[1]".',
                resourceName, ( context.widget || { id: 'unknown' } ).id
             );
-            $q = $q || ng.injector( [ 'ng' ] ).get( '$q' );
-            return $q.when();
+            return resolvedPromise();
          }
 
          return context.eventBus.publish( 'didUpdate.' + resourceName, {
@@ -1817,6 +1833,13 @@ define( 'laxar-patterns/lib/resources',[
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   var $q;
+
+   function resolvedPromise() {
+      $q = $q || ng.injector( [ 'ng' ] ).get( '$q' );
+      return $q.when();
+   }
 
    return {
 
