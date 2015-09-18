@@ -1,6 +1,6 @@
 {
    "name": "laxar-patterns",
-   "version": "1.0.0",
+   "version": "1.0.1",
    "description": "Utilities to implement standard event patterns in LaxarJS widgets",
    "main": "dist/laxar-patterns.js",
    "authors": [],
@@ -17,7 +17,7 @@
       "fast-json-patch": "~0.5.2"
    },
    "devDependencies": {
-      "laxar-patterns": "LaxarJS/laxar-patterns#^1.0.0",
-      "laxar": "LaxarJS/laxar#^1.0.0"
+      "laxar-patterns": "LaxarJS/laxar-patterns#1.0.1",
+      "laxar": "LaxarJS/laxar#~1.0.0"
    }
 }

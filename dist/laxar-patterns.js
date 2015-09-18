@@ -490,7 +490,7 @@ define( 'laxar-patterns/lib/flags',[
     *    example `flags.myFlag` would set `scope.flags.myFlag` to the currently valid accumulated state
     * @param {String} optionalOptions.predicate
     *    one of these:
-    *    - `any`: if any of the flag's states is `true`, the accumulated state is `true. This is the default
+    *    - `any`: if any of the flag's states is `true`, the accumulated state is `true`. This is the default
     *    - `all`: if all of the flag's states are `true`, the accumulated state is `true`
     *
     * @return {FlagHandler}
@@ -524,7 +524,7 @@ define( 'laxar-patterns/lib/flags',[
     *    example `flags.myFlag` would set `scope.flags.myFlag` to the currently valid accumulated state
     * @param {String} optionalOptions.predicate
     *    one of these:
-    *    - `any`: if any of the flag's sates is `true`, the accumulated state is `true. This is the default
+    *    - `any`: if any of the flag's sates is `true`, the accumulated state is `true`. This is the default
     *    - `all`: if all of the flag's states are `true`, the accumulated state is `true`
     *
     * @return {FlagHandler}
@@ -1675,7 +1675,7 @@ define( 'laxar-patterns/lib/resources',[
             } );
          }
          finally {
-            self.waitingFor_.splice( self.waitingFor_.indexOf( resource ), 1 );
+            self.waitingFor_ = self.waitingFor_.filter( function( topic  ) { return topic !== resource; } );
             if( !self.waitingFor_.length ) {
                self.allReplacedCallback_();
             }
