@@ -1691,7 +1691,7 @@ define( 'laxar-patterns/lib/resources',[
             } );
          }
          finally {
-            self.waitingFor_.splice( self.waitingFor_.indexOf( resource ), 1 );
+            self.waitingFor_ = self.waitingFor_.filter( function( topic  ) { return topic !== resource; } );
             if( !self.waitingFor_.length ) {
                self.allReplacedCallback_();
             }
