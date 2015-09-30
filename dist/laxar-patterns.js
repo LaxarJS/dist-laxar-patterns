@@ -971,7 +971,7 @@ define( 'laxar-patterns/lib/json',[
 } );
 
 /**
- * Copyright 2014 aixigo AG
+ * Copyright 2015 aixigo AG
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
@@ -993,6 +993,10 @@ define( 'laxar-patterns/lib/patches',[
     * Applies all patches given as mapping from object path to new value. If a path fragment doesn't exist
     * it is automatically inserted, using an array if the next key would be an integer. If a value is
     * appended to an array all values in between are set to `null`.
+    *
+    * This patch format cannot express all operations. Use `json.applyPatch` instead.
+    *
+    * @deprecated since v1.1
     *
     * @param {Object} obj
     *    the object to apply the patches on
@@ -1027,6 +1031,10 @@ define( 'laxar-patterns/lib/patches',[
     *
     * Properties that start with '$$' are ignored when creating patches, so that for example the $$hashCode
     * added by AngularJS ngRepeat is ignored.
+    *
+    * This patch format cannot express all operations. Use `json.createPatch` instead.
+    *
+    * @deprecated since v1.1
     *
     * @param {Object} result
     *    the resulting object the patch map should establish
@@ -1086,6 +1094,11 @@ define( 'laxar-patterns/lib/patches',[
    /**
     * Merges two patch maps and returns the result. When properties exist in both patch maps, properties
     * within the second map overwrite those found within the first one.
+    *
+    * This patch format cannot express all operations.
+    * Concatenate `json.createPatch` sequences instead of using this method.
+    *
+    * @deprecated since v1.1
     *
     * @param {Object} first
     *    first map to merge
@@ -1211,9 +1224,8 @@ define( 'laxar-patterns/lib/patches',[
 define( 'laxar-patterns/lib/resources',[
    'angular',
    'laxar',
-   'json-patch',
-   './patches'
-], function( ng, ax, jsonPatch, patches ) {
+   'json-patch'
+], function( ng, ax, jsonPatch ) {
    'use strict';
 
    var assert = ax.assert;
@@ -1677,9 +1689,9 @@ define( 'laxar-patterns/lib/resources',[
       }
       self.modelHandlers_[ resource ].onReplace = [ handler ];
 
-      self.context_.eventBus.subscribe( 'didReplace.' + resource, function( event ) {
+      self.context_.eventBus.subscribe( 'didReplace.' + resource, function( event, meta ) {
          var changed = self.modelHandlers_[ resource ].onReplace.reduce( function( changed, handler ) {
-            return handler( event ) || changed;
+            return handler( event, meta ) || changed;
          }, false );
          if( !changed ) {
             return;
@@ -1687,7 +1699,7 @@ define( 'laxar-patterns/lib/resources',[
 
          try {
             self.externalHandlers_[ resource ].onReplace.forEach( function( handler ) {
-               handler( event );
+               handler( event, meta );
             } );
          }
          finally {
@@ -1714,9 +1726,9 @@ define( 'laxar-patterns/lib/resources',[
       }
       self.modelHandlers_[ resource ].onUpdate = [ handler ];
 
-      self.context_.eventBus.subscribe( 'didUpdate.' + resource, function( event ) {
+      self.context_.eventBus.subscribe( 'didUpdate.' + resource, function( event, meta ) {
          var changed = self.modelHandlers_[ resource ].onUpdate.reduce( function( changed, handler ) {
-            return handler( event ) || changed;
+            return handler( event, meta ) || changed;
          }, false );
          if( !changed ) {
             return;
@@ -1724,7 +1736,7 @@ define( 'laxar-patterns/lib/resources',[
 
          try {
             self.externalHandlers_[ resource ].onUpdate.forEach( function( handler ) {
-               handler( event );
+               handler( event, meta );
             } );
          }
          finally {
