@@ -305,7 +305,7 @@ define( 'laxar-patterns/lib/actions',[
          throw error;
       }
 
-      ax._tooling.provideQ().when( returnValue )
+      q().when( returnValue )
          .then( function( promiseValue ) {
             if( isObject( promiseValue ) ) {
                responseEvent.outcome =
@@ -333,6 +333,14 @@ define( 'laxar-patterns/lib/actions',[
 
    function isObject( value ) {
       return value !== null && typeof value === 'object';
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   var q_;
+   function q() {
+      q_ = q_ || ax._tooling.provideQ();
+      return q_;
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1222,10 +1230,9 @@ define( 'laxar-patterns/lib/patches',[
  * @module resources
  */
 define( 'laxar-patterns/lib/resources',[
-   'angular',
    'laxar',
    'json-patch'
-], function( ng, ax, jsonPatch ) {
+], function( ax, jsonPatch ) {
    'use strict';
 
    var assert = ax.assert;
@@ -1322,7 +1329,9 @@ define( 'laxar-patterns/lib/resources',[
 
       var resourceName = ax.object.path( context.features, featurePath + '.resource' );
       if( !resourceName && options.isOptional ) {
-         return resolvedPromise;
+         return function() {
+            return q().when();
+         };
       }
       assert( resourceName ).hasType( String ).isNotNull();
 
@@ -1400,7 +1409,7 @@ define( 'laxar-patterns/lib/resources',[
       var resourceName = ax.object.path( context.features, featurePath + '.resource' );
       if( !resourceName && options.isOptional ) {
          var noopPublisher = function() {
-            return resolvedPromise();
+            return q().when();
          };
          noopPublisher.compareAndPublish = function() {
             return noopPublisher();
@@ -1417,7 +1426,7 @@ define( 'laxar-patterns/lib/resources',[
                'updatePublisher: Not sending empty didUpdate to resource "[0]" from sender "[1]".',
                resourceName, ( context.widget || { id: 'unknown' } ).id
             );
-            return resolvedPromise();
+            return q().when();
          }
 
          return context.eventBus.publish( 'didUpdate.' + resourceName, {
@@ -1846,12 +1855,13 @@ define( 'laxar-patterns/lib/resources',[
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-   var $q;
-
-   function resolvedPromise() {
-      $q = $q || ng.injector( [ 'ng' ] ).get( '$q' );
-      return $q.when();
+   var q_;
+   function q() {
+      q_ = q_ || ax._tooling.provideQ();
+      return q_;
    }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    return {
 
@@ -1883,17 +1893,9 @@ define( 'laxar-patterns/lib/resources',[
  * @module validation
  */
 define( 'laxar-patterns/lib/validation',[
-   'laxar',
-   'angular'
-], function( ax, ng ) {
+   'laxar'
+], function( ax ) {
    'use strict';
-
-   var $q;
-   ng.injector( [ 'ng' ] ).invoke( [ '$q', function( _$q_ ) {
-      $q = _$q_;
-   } ] );
-
-   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    /**
     * Creates and returns an event resembling a successful validation result.
@@ -2088,7 +2090,7 @@ define( 'laxar-patterns/lib/validation',[
          try {
             var returnValue = validator();
 
-            $q.when( returnValue )
+            q().when( returnValue )
                .then( function( result ) {
                   var messages = Array.isArray( result ) ? result : ( result ? [ result ] : null );
                   var event = messages && messages.length > 0 ?
@@ -2161,6 +2163,14 @@ define( 'laxar-patterns/lib/validation',[
          return messages;
       }
       return [].slice.call( args, 1 );
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   var q_;
+   function q() {
+      q_ = q_ || ax._tooling.provideQ();
+      return q_;
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
