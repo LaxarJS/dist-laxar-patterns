@@ -1,5 +1,5 @@
 /**
- * Copyright 2015 aixigo AG
+ * Copyright 2016 aixigo AG
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
@@ -354,7 +354,7 @@ define( 'laxar-patterns/lib/actions',[
 } );
 
 /**
- * Copyright 2014 aixigo AG
+ * Copyright 2016 aixigo AG
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
@@ -425,7 +425,7 @@ define( 'laxar-patterns/lib/errors',[ 'laxar' ], function( ax ) {
 } );
 
 /**
- * Copyright 2014 aixigo AG
+ * Copyright 2016 aixigo AG
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
@@ -637,7 +637,7 @@ define( 'laxar-patterns/lib/flags',[
 } );
 
 /**
- * Copyright 2014 aixigo AG
+ * Copyright 2016 aixigo AG
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
@@ -802,7 +802,7 @@ define( 'laxar-patterns/lib/i18n',[
 } );
 
 /**
- * Copyright 2015 aixigo AG
+ * Copyright 2016 aixigo AG
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
@@ -977,7 +977,7 @@ define( 'laxar-patterns/lib/json',[
 } );
 
 /**
- * Copyright 2015 aixigo AG
+ * Copyright 2016 aixigo AG
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
@@ -1209,7 +1209,7 @@ define( 'laxar-patterns/lib/patches',[
 } );
 
 /**
- * Copyright 2015 aixigo AG
+ * Copyright 2016 aixigo AG
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
@@ -2178,7 +2178,7 @@ define( 'laxar-patterns/lib/validation',[
 } );
 
 /**
- * Copyright 2014 aixigo AG
+ * Copyright 2016 aixigo AG
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
@@ -2361,7 +2361,7 @@ define( 'laxar-patterns/lib/visibility',[
 } );
 
 /**
- * Copyright 2015 aixigo AG
+ * Copyright 2016 aixigo AG
  * Released under the MIT license.
  * http://laxarjs.org/license
  */
